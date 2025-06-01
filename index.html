@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoulSplit - Blockchain Guessing Game</title>
+  <!-- External Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.25.6/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.7.0/web3.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Global Styles */
+    body {
+      font-family: 'Orbitron', sans-serif;
+      margin: 0;
+      background: #000000;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Animated Background with Green Dots */
+    .background-dot {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: rgba(46, 204, 113, 0.6);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Game Box Styles */
+    .box {
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%232ecc71;stop-opacity:0.95" /><stop offset="100%" style="stop-color:%231e7e34;stop-opacity:0.95" /></linearGradient><filter id="neon" fx="-50%" fy="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="url(%23grad)" filter="url(%23neon)" /><path d="M50,15 L85,35 L85,65 L85,65 L50,85 L15,65 L15,35 Z" fill="none" stroke="%23ffffff" stroke-width="1.2" opacity="0.7"/><path d="M50,30 L70,45 L50,60 L30,45 Z" fill="none" stroke="%23ffffff" stroke-width="1" opacity="0.5"/></svg>');
+            background-size: cover;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-radius: 10px;
+        }
+        .box:hover:not(.revealed) {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(46, 204, 113, 0.9);
+        }
+        .box.clicked {
+            transform: scale(0.95);
+        }
+        .box.safe {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23059669;stop-opacity:0.95" /><stop offset="100%" style="stop-color:%232ecc71;stop-opacity:0.95" /></linearGradient><filter id="neon" fx="-50%" fy="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="url(%23grad)" filter="url(%23neon)" /><path d="M50,15 L85,35 L85,65 L50,85 L15,65 L15,35 Z" fill="none" stroke="%23ffffff" stroke-width="1.2" opacity="0.7"/><path d="M50,30 L70,45 L50,60 L30,45 Z" fill="none" stroke="%23ffffff" stroke-width="1" opacity="0.5"/></svg>');
+        }
+        .box.bomb {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23dc2626;stop-opacity:0.95" /><stop offset="100%" style="stop-color:%239b1c1c;stop-opacity:0.95" /></linearGradient><filter id="neon" fx="-50%" fy="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="url(%23grad)" filter="url(%23neon)" /><path d="M50,15 L85,35 L85,65 L50,85 L15,65 L15,35 Z" fill="none" stroke="%23ffffff" stroke-width="1.2" opacity="0.7"/><path d="M50,30 L70,45 L50,60 L30,45 Z" fill="none" stroke="%23ffffff" stroke-width="1" opacity="0.5"/></svg>');
+        }
+
+        /* Button Styles */
+        .button {
+            transition: transform 0.2s ease, border-color 0.2s ease;
+            border: 1px solid transparent;
+        }
+        .button:hover {
+            transform: scale(1.02);
+            border-color: rgba(46, 204, 113, 0.3);
+        }
+
+        /* Icon Styles */
+        .icon {
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        /* Text Styles */
+        .text-white {
+            color: rgba(255, 255, 255, 0.9);
+            letter-spacing: 0.05em;
+        }
+
+        /* Logo Styles */
+        .logo {
+            max-width: 200px;
+            height: auto;
+        }
+
+        /* Error Boundary */
+        .error-boundary {
+            color: #ff4d4f;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* UI Container */
+        .ui-container {
+            background: rgba(15, 33, 46, 0.6); /* #0F212E with 60% opacity */
+        }
+
+        /* Pulse Meter */
+        .pulse-meter {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .pulse-fill {
+            height: 100%;
+            background: linear-gradient(to right, #2ecc71, #1e7e34);
+            transition: width 0.5s ease;
+        }
+
+        /* Leaderboard Styles */
+        .leaderboard-container {
+            background: #000000;
+            border: 2px solid #2ecc71;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.3);
+            padding: 16px;
+            z-index: 1;
+        }
+        .leaderboard-item {
+            position: relative;
+            transition: transform 0.3s ease;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .leaderboard-item:hover {
+            transform: translateX(5px);
+        }
+        .leaderboard-item::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #2ecc71;
+            transition: width 0.3s ease;
+        }
+        .leaderboard-item:hover::after {
+            width: 100%;
+        }
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-right: 8px;
+            transition: transform 0.3s ease;
+        }
+        .rank-badge:hover {
+            transform: scale(1.1);
+        }
+        .rank-1 {
+            background: linear-gradient(to right, #2ecc71, #1e7e34);
+        }
+        .rank-2 {
+            background: linear-gradient(to right, #c0c0c0, #a9a9a9);
+        }
+        .rank-3 {
+            background: linear-gradient(to right, #cd7f32, #b87333);
+        }
+        .rank-4, .rank-5 {
+            background: linear-gradient(to right, #4b5e6d, #3a4a56);
+        }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    console.log('Starting SoulSplit initialization...');
+
+    // Error Boundary Component
+    class ErrorBoundary extends React.Component {
+      state = { hasError: false, error: null };
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="error-boundary">
+              <h2>Something went wrong.</h2>
+              <p>{this.state.error?.message || 'Unknown error'}</p>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    // Game Multipliers
+    const multipliers = [
+      0.1, 0.3, 0.6, 1, 1.5, 2.2, 3.1, 4.2, 5.5, 7,
+      8.8, 10.9, 13.2, 15.8, 18.7, 22, 26, 30, 35, 40
+    ];
+
+    // Generate Random Bombs for Demo Mode
+    function getRandomBombs() {
+      const bombs = new Set();
+      while (bombs.size < 2) {
+        bombs.add(Math.floor(Math.random() * 5));
+      }
+      return Array.from(bombs);
+    }
+
+    // Main Game Component
+    function SoulSplit() {
+      console.log('Rendering SoulSplit component...');
+
+      // State Management
+      const [level, setLevel] = React.useState(1);
+      const [bombs, setBombs] = React.useState(getRandomBombs());
+      const [gameState, setGameState] = React.useState('initial');
+      const [selectedBox, setSelectedBox] = React.useState(null);
+      const [winnings, setWinnings] = React.useState(0);
+      const [boxStates, setBoxStates] = React.useState(Array(5).fill(''));
+      const [account, setAccount] = React.useState(null);
+      const [balance, setBalance] = React.useState(0);
+      const [demoBalance, setDemoBalance] = React.useState(1);
+      const [betAmount, setBetAmount] = React.useState('');
+      const [transactionStatus, setTransactionStatus] = React.useState('');
+      const [error, setError] = React.useState('');
+      const [web3, setWeb3] = React.useState(null);
+      const [contract, setContract] = React.useState(null);
+      const [pulse, setPulse] = React.useState(80);
+      const [leaderboard, setLeaderboard] = React.useState([]);
+      const leaderboardRef = React.useRef(null);
+
+      // Network Configuration
+      const ABSTRACT_CHAIN = {
+        chainId: '0x123', // TODO: Replace with Abstract Chain ID (e.g., '0x123' for 291)
+        chainName: 'Abstract Chain',
+        rpcUrls: ['https://testnet-rpc.abstractchain.org'], // TODO: Replace with actual RPC URL
+        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+        blockExplorerUrls: ['https://testnet-explorer.abstractchain.org'] // TODO: Replace with actual explorer URL
+      };
+
+      // Contract Configuration
+      const CONTRACT_ADDRESS = '0xYourDeployedContractAddress'; // TODO: Replace with actual deployed contract address
+      const CONTRACT_ABI = [
+        {
+          inputs: [
+            { internalType: 'uint256', name: '_betAmount', type: 'uint256' },
+            { internalType: 'uint256', name: '_boxIndex', type: 'uint256' }
+          ],
+          name: 'play',
+          outputs: [],
+          stateMutability: 'payable',
+          type: 'function'
+        },
+        {
+          inputs: [],
+          name: 'getLeaderboard',
+          outputs: [
+            { internalType: 'address[]', name: '', type: 'address[]' },
+            { internalType: 'uint256[]', name: '', type: 'uint256[]' }
+          ],
+          stateMutability: 'view',
+          type: 'function'
+        },
+        {
+          inputs: [{ internalType: 'address', name: '_player', type: 'address' }],
+          name: 'getCurrentLevel',
+          outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+          stateMutability: 'view',
+          type: 'function'
+        },
+        {
+          anonymous: false,
+          inputs: [
+            { indexed: true, internalType: 'address', name: 'player', type: 'address' },
+            { indexed: false, internalType: 'uint256', name: 'level', type: 'uint256' },
+            { indexed: false, internalType: 'uint256', name: '_boxIndex', type: 'uint256' },
+            { indexed: false, internalType: 'bool', name: 'isWin', type: 'bool' },
+            { indexed: false, internalType: 'uint256', name: 'payout', type: 'uint256' }
+          ],
+          name: 'GameResult',
+          type: 'event'
+        }
+      ];
+
+      // Fetch Leaderboard Data
+      const fetchLeaderboard = async () => {
+        if (!contract) return;
+        try {
+          const [addresses, levels] = await contract.methods.getLeaderboard().call();
+          const leaderboardData = addresses
+            .map((addr, i) => ({ address: addr, level: levels[i] }))
+            .filter(item => item.address !== '0x0000000000000000000000000000000000000000');
+          setLeaderboard(leaderboardData);
+          console.log('Leaderboard fetched:', leaderboardData);
+        } catch (err) {
+          console.error('Leaderboard fetch error:', err);
+          setError('Failed to fetch leaderboard: ' + err.message);
+        }
+      };
+
+      // Initialize Web3 and Wallet
+      React.useEffect(() => {
+        console.log('Running useEffect for Web3 initialization...');
+        const initWeb3 = async () => {
+          if (typeof window.ethereum !== 'undefined') {
+            try {
+              const web3Instance = new Web3(window.ethereum);
+              setWeb3(web3Instance);
+              console.log('Web3 initialized');
+
+              if (!web3Instance.utils.isAddress(CONTRACT_ADDRESS)) {
+                throw new Error('Invalid contract address: ' + CONTRACT_ADDRESS);
+              }
+
+              const accounts = await web3Instance.eth.getAccounts();
+              if (accounts.length > 0) {
+                setAccount(accounts[0]);
+                const balanceWei = await web3Instance.eth.getBalance(accounts[0]);
+                setBalance(web3Instance.utils.fromWei(balanceWei, 'ether'));
+                const contractInstance = new web3Instance.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+                setContract(contractInstance);
+                console.log('Wallet connected:', accounts[0]);
+                fetchLeaderboard();
+              }
+            } catch (err) {
+              console.error('Web3 initialization error:', err);
+              setError('Failed to connect wallet: ' + err.message);
+            }
+          } else {
+            console.log('MetaMask not detected, defaulting to demo mode');
+            setError('MetaMask not detected. Please install MetaMask.');
+          }
+        };
+        initWeb3();
+
+        // Create Animated Background Dots
+        const dots = [];
+        for (let i = 0; i < 20; i++) {
+          const dot = document.createElement('div');
+          dot.className = 'background-dot';
+          document.body.appendChild(dot);
+          dots.push(dot);
+          gsap.to(dot, {
+            x: () => Math.random() * window.innerWidth,
+            y: () => Math.random() * window.innerHeight,
+            opacity: () => 0.3 + Math.random() * 0.4,
+            duration: () => 5 + Math.random() * 5,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+            delay: Math.random() * 2
+          });
+        }
+
+        // Pulse Meter Animation
+        const pulseInterval = setInterval(() => {
+          setPulse(Math.floor(Math.random() * 20 + 80));
+        }, 5000);
+
+        return () => {
+          console.log('Cleaning up dots and pulse interval');
+          dots.forEach(d => d.remove());
+          clearInterval(pulseInterval);
+        };
+      }, []);
+
+      // Update Leaderboard
+      React.useEffect(() => {
+        if (contract) {
+          fetchLeaderboard();
+        }
+      }, [contract, gameState]);
+
+      // Animate Leaderboard Items
+      React.useEffect(() => {
+        if (leaderboardRef.current) {
+          const items = leaderboardRef.current.querySelectorAll('.leaderboard-item');
+          items.forEach((item, index) => {
+            gsap.fromTo(
+              item,
+              { opacity: 0, y: 20 },
+              { opacity: 1, y: 0, duration: 0.5, delay: index * 0.1, ease: 'power2.out' }
+            );
+          });
+        }
+      }, [leaderboard]);
+
+      // Connect Wallet
+      const connectWallet = async () => {
+        console.log('Connecting wallet...');
+        if (!window.ethereum) {
+          setError('MetaMask not detected. Please install MetaMask.');
+          console.error('MetaMask not detected');
+          return;
+        }
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: ABSTRACT_CHAIN.chainId }],
+          });
+        } catch (switchError) {
+          if (switchError.code === 4902) {
+            try {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [ABSTRACT_CHAIN],
+              });
+            } catch (addError) {
+              setError('Failed to add Abstract Chain: ' + addError.message);
+              console.error('Add chain error:', addError);
+              return;
+            }
+          } else {
+            setError('Failed to switch to Abstract Chain: ' + switchError.message);
+            console.error('Switch chain error:', switchError);
+            return;
+          }
+        }
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          setAccount(accounts[0]);
+          const balanceWei = await web3.eth.getBalance(accounts[0]);
+          setBalance(web3.utils.fromWei(balanceWei, 'ether'));
+          if (!web3.utils.isAddress(CONTRACT_ADDRESS)) {
+            throw new Error('Invalid contract address: ' + CONTRACT_ADDRESS);
+          }
+          const contractInstance = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+          setContract(contractInstance);
+          setError('');
+          console.log('Wallet connected:', accounts[0]);
+          fetchLeaderboard();
+        } catch (err) {
+          setError('Failed to connect wallet: ' + err.message);
+          console.error('Wallet connection error:', err);
+        }
+      };
+
+      // Start Demo Mode
+      const startDemo = () => {
+        console.log('Starting demo mode');
+        setGameState('demo');
+        setBombs(getRandomBombs());
+      };
+
+      // Reset Demo Balance
+      const resetDemoBalance = () => {
+        console.log('Resetting demo balance');
+        setDemoBalance(1);
+      };
+
+      // Handle Bet Submission
+      const handleBetSubmit = async () => {
+        console.log('Submitting bet:', betAmount);
+        if (!account) {
+          setError('Please connect your wallet first.');
+          console.error('No wallet connected');
+          return;
+        }
+        const betValue = parseFloat(betAmount);
+        if (isNaN(betValue) || betValue < 0.004 || betValue > 1) {
+          setError('Bet amount must be between 0.004 ETH and 1 ETH.');
+          console.error('Invalid bet amount:', betValue);
+          return;
+        }
+        if (parseFloat(balance) < betValue) {
+          setError('Insufficient balance for this bet.');
+          console.error('Insufficient balance:', balance);
+          return;
+        }
+        setGameState('playing');
+        setBombs(getRandomBombs());
+        setError('');
+      };
+
+      // Handle Box Click
+      const handleBoxClick = async (index) => {
+        console.log('Box clicked:', index);
+        if (gameState !== 'playing' && gameState !== 'demo' || selectedBox !== null) return;
+        const boxElement = document.getElementById(`box-${index}`);
+        gsap.to(boxElement, {
+          scale: 0.95,
+          duration: 0.15,
+          onComplete: async () => {
+            setSelectedBox(index);
+            const newBoxStates = [...boxStates];
+            let isWin = true;
+            if (gameState === 'demo') {
+              newBoxStates[index] = bombs.includes(index) ? 'bomb' : 'safe';
+              isWin = !bombs.includes(index);
+            } else {
+              setTransactionStatus('Pending...');
+              try {
+                const betWei = web3.utils.toWei(betAmount, 'ether');
+                const tx = await contract.methods.play(betWei, index).send({
+                  from: account,
+                  value: betWei,
+                  gas: 300000
+                });
+                setTransactionStatus('Transaction confirmed!');
+                isWin = tx.events.GameResult.returnValues.isWin;
+                newBoxStates[index] = isWin ? 'safe' : 'bomb';
+                const newBalance = await web3.eth.getBalance(account);
+                setBalance(web3.utils.fromWei(newBalance, 'ether'));
+                fetchLeaderboard();
+              } catch (err) {
+                setTransactionStatus('Transaction failed: ' + err.message);
+                setSelectedBox(null);
+                setGameState('betting');
+                console.error('Transaction error:', err);
+                return;
+              }
+            }
+            setBoxStates(newBoxStates);
+            gsap.to(boxElement, { scale: 1, duration: 0.15 });
+            gsap.to(`#icon-${index}`, {
+              opacity: 1,
+              scale: 1,
+              duration: 0.4,
+              ease: 'back.out(2)'
+            });
+            for (let i = 0; i < 5; i++) {
+              if (i !== index && !boxStates[i]) {
+                gsap.set(`#icon-${i}`, { opacity: 1, scale: 1 });
+              }
+            }
+            if (isWin) {
+              setWinnings(multipliers[level - 1]);
+              if (gameState === 'demo') {
+                setDemoBalance(prev => (prev * multipliers[level - 1]).toFixed(4));
+              }
+              setGameState(level === 20 ? 'won' : gameState);
+            } else {
+              setGameState('lost');
+            }
+          }
+        });
+      };
+
+      // Continue to Next Level
+      const handleContinue = async () => {
+        console.log('Continuing to next level');
+        gsap.to('.box', {
+          opacity: 0,
+          y: 20,
+          duration: 0.3,
+          stagger: 0.05,
+          onComplete: async () => {
+            setLevel(level + 1);
+            setBombs(getRandomBombs());
+            setSelectedBox(null);
+            setBoxStates(Array(5).fill(''));
+            setGameState(gameState === 'demo' ? 'demo' : 'playing');
+            gsap.to('.box', {
+              opacity: 1,
+              y: 0,
+              duration: 0.3,
+              stagger: 0.05,
+              onComplete: () => {
+                for (let i = 0; i < 5; i++) {
+                  gsap.set(`#icon-${i}`, { opacity: 1, scale: 1 });
+                }
+              }
+            });
+          }
+        });
+      };
+
+      // Cash Out Winnings
+      const handleCashOut = () => {
+        console.log('Cashing out');
+        setGameState('won');
+      };
+
+      // Reset Game
+      const handleReset = async () => {
+        console.log('Resetting game');
+        gsap.to('.box', {
+          opacity: 0,
+          y: 20,
+          duration: 0.3,
+          stagger: 0.05,
+          onComplete: async () => {
+            setLevel(1);
+            setBombs(getRandomBombs());
+            setSelectedBox(null);
+            setGameState('initial');
+            setWinnings(0);
+            setBoxStates(Array(5).fill(''));
+            setBetAmount('');
+            setTransactionStatus('');
+            gsap.to('.box', {
+              opacity: 1,
+              y: 0,
+              duration: 0.3,
+              stagger: 0.05,
+              onComplete: () => {
+                for (let i = 0; i < 5; i++) {
+                  gsap.set(`#icon-${i}`, { opacity: 1, scale: 1 });
+                }
+              }
+            });
+            if (web3 && account) {
+              const newBalance = await web3.eth.getBalance(account);
+              setBalance(web3.utils.fromWei(newBalance, 'ether'));
+              fetchLeaderboard();
+            }
+          }
+        });
+      };
+
+      // Render UI
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 relative">
+          <img
+            src="SoulSplit.png" // TODO: Replace with actual logo path or base64 string
+            alt="SoulSplit Logo"
+            className="logo mb-6"
+          />
+          <div className="ui-container rounded-lg p-4 mb-6 w-full max-w-md sm:max-w-lg z-10">
+            <div className="text-center text-white">
+              <p className="text-base sm:text-lg font-semibold">Abstract Chain Pulse: {pulse}%</p>
+              <div className="pulse-meter mt-2 mb-2">
+                <div className="pulse-fill" style={{ width: `${pulse}%` }}></div>
+              </div>
+              <p className="text-base sm:text-lg font-semibold">Multiplier: {winnings.toFixed(1)}x</p>
+              {account ? (
+                <>
+                  <p className="text-base sm:text-lg font-semibold">Wallet: {account.slice(0, 6)}...{account.slice(-4)}</p>
+                  <p className="text-base sm:text-lg font-semibold">Balance: {parseFloat(balance).toFixed(4)} ETH</p>
+                </>
+              ) : (
+                <button
+                  onClick={connectWallet}
+                  className="button px-5 sm:px-6 py-2 sm:py-3 bg-[#2ecc71] text-white rounded-lg font-semibold text-sm sm:text-base mt-2"
+                >
+                  Connect Wallet
+                </button>
+              )}
+              {gameState === 'demo' && (
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <p className="text-base sm:text-lg font-semibold">Demo Balance: {parseFloat(demoBalance).toFixed(4)} ETH</p>
+                  <button
+                    onClick={resetDemoBalance}
+                    className="button px-3 py-1 bg-[#ff4d4f] text-white rounded-lg font-semibold text-sm"
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
+              {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+              {transactionStatus && <p className="text-yellow-400 text-sm mt-2">{transactionStatus}</p>}
+            </div>
+          </div>
+          {gameState === 'initial' && (
+            <div className="flex flex-col gap-4 w-full max-w-md sm:max-w-lg z-10">
+              <button
+                onClick={startDemo}
+                className="button px-5 sm:px-6 py-2 sm:py-3 bg-[#1e90ff] text-white rounded-lg font-semibold text-sm sm:text-base"
+              >
+                Play Demo
+              </button>
+              {account && (
+                <div className="ui-container rounded-lg p-4">
+                  <label className="text-white text-sm sm:text-base font-semibold">Bet Amount (ETH):</label>
+                  <input
+                    type="number"
+                    value={betAmount}
+                    onChange={(e) => setBetAmount(e.target.value)}
+                    placeholder="0.004 - 1 ETH"
+                    step="0.001"
+                    className="w-full p-2 mt-2 bg-[#0F212E] text-white rounded-lg"
+                  />
+                  <button
+                    onClick={handleBetSubmit}
+                    className="button px-5 sm:px-6 py-2 sm:py-3 bg-[#2ecc71] text-white rounded-lg font-semibold text-sm sm:text-base mt-4"
+                  >
+                    Place Bet
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          {(gameState === 'playing' || gameState === 'demo' || gameState === 'won' || gameState === 'lost') && (
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 sm:gap-4 mb-6 w-full max-w-md sm:max-w-lg z-10">
+              {[...Array(5)].map((_, i) => (
+                <button
+                  key={i}
+                  id={`box-${i}`}
+                  onClick={() => handleBoxClick(i)}
+                  disabled={(gameState !== 'playing' && gameState !== 'demo') || selectedBox !== null}
+                  className={`box w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center text-white text-2xl relative disabled:opacity-70 ${boxStates[i]}`}
+                >
+                  <span
+                    id={`icon-${i}`}
+                    className={`icon absolute ${boxStates[i] ? '' : 'opacity-100 scale-100'}`}
+                  >
+                    {boxStates[i] ? (boxStates[i] === 'bomb' ? '💣' : '✔') : '?'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {(gameState === 'playing' || gameState === 'demo') && selectedBox !== null && boxStates[selectedBox] === 'safe' && level < 20 && (
+            <div className="flex gap-3 sm:gap-4 mb-6 z-10">
+              <button
+                onClick={handleContinue}
+                className="button px-5 sm:px-6 py-2 sm:py-3 bg-[#2ecc71] text-white rounded-lg font-semibold text-sm sm:text-base"
+              >
+                Continue
+              </button>
+              <button
+                onClick={handleCashOut}
+                className="button px-5 sm:px-6 py-2 sm:py-3 bg-[#2ecc71] text-white rounded-lg font-semibold text-sm sm:text-base"
+              >
+                Cash Out
+              </button>
+            </div>
+          )}
+          {gameState === 'lost' && (
+            <div className="ui-container rounded-lg p-4 text-center w-full max-w-md sm:max-w-lg mb-6 z-10">
+              <p className="text-base sm:text-lg font-semibold text-white mb-4">Game Over! You hit a bomb.</p>
+              <button
+                onClick={handleReset}
+                className="button px-5 sm:px-6 py-2 sm:py-3 bg-[#2ecc71] text-white rounded-lg font-semibold text-sm sm:text-base"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+          {gameState === 'won' && (
+            <div className="ui-container rounded-lg p-4 text-center w-full max-w-md sm:max-w-lg mb-6 z-10">
+              <p className="text-base sm:text-lg font-semibold text-white mb-4">
+                {level === 20
+                  ? `Congratulations! You completed all challenges! Winnings: ${winnings.toFixed(1)}x`
+                  : `You cashed out! Winnings: ${winnings.toFixed(1)}x`}
+              </p>
+              <button
+                onClick={handleReset}
+                className="button px-5 sm:px-6 py-2 sm:py-3 bg-[#2ecc71] text-white rounded-lg font-semibold text-sm sm:text-base"
+              >
+                Play Again
+              </button>
+            </div>
+          )}
+          <div className="leaderboard-container w-full max-w-md sm:max-w-lg mt-6 z-10" ref={leaderboardRef}>
+            <h2 className="text-lg sm:text-xl font-bold text-white mb-4 flex items-center">
+              <span className="mr-2">🎖️</span> Leaderboard: Top Players
+            </h2>
+            {leaderboard.length > 0 ? (
+              <div className="space-y-2">
+                {leaderboard.map((item, index) => (
+                  <div
+                    key={index}
+                    className="leaderboard-item flex items-center justify-between text-white text-sm sm:text-sm font-semibold"
+                  >
+                    <div className="flex items-center">
+                      <span className={`rank-badge rank-${index + 1}`}>
+                        {index + 1}
+                      </span>
+                      <span>{item.address.slice(0, 6)}...{item.address.slice(-4)}</span>
+                    </div>
+                    <span>Level {item.level}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-white text-sm sm:text-base font-semibold">No players on the leaderboard yet.</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Render App
+    console.log('Rendering app...');
+    ReactDOM.render(
+      <ErrorBoundary>
+        <SoulSplit />
+      </ErrorBoundary>,
+      document.getElementById('root')
+    );
+  </script>
+</body>
+</html>
